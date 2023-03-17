@@ -1,0 +1,143 @@
+Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal Milliseconds As LongPtr)
+
+Public Sub MoveFiles(docType As String, srcFolderStartPath As String, destFolderStartPath As String, colFirstHolder As String, _
+    colClientName As String, colSubfolder As String, colFileObtained As String, colFileName As String, colFileRenamed As String, _
+    colFileVerified As String, colFileMovedStatus As String)
+
+    Dim lastRow As Integer
+    Dim investorName As String
+    Dim clientName As String
+    
+    Dim rootFolder As String
+    Dim srcFolder As String
+    Dim destFolder As String
+    Dim fileName As String
+    Dim fso As Scripting.FileSystemObject
+    
+    rootFolder = ThisWorkbook.Path
+    Set fso = New Scripting.FileSystemObject
+    
+    If Not fso.FolderExists(rootFolder & "\Clients") Then
+        fso.CreateFolder (rootFolder & "\Clients")
+    End If
+    
+    Range("A1").Select
+    lastRow = Selection.End(xlDown).Row
+    
+    Range(colFileMovedStatus & "2:" & colFileMovedStatus & lastRow).Clear
+    
+    For Row = 2 To lastRow
+        investorName = Range(colFirstHolder & Row).Value
+        clientName = Range(colClientName & Row).Value
+        
+        If clientName = "Not Available" Then
+            Range(colFileMovedStatus & Row).Value = "Client Name Not Available"
+        ElseIf Range(colFileName & Row).Value = "" Then
+            Range(colFileMovedStatus & Row).Value = "File Name Not Available"
+        ElseIf Range(colFileRenamed & Row).Value = "" Then
+            Range(colFileMovedStatus & Row).Value = "File Name Not Renamed"
+        Else
+            ' Create folders
+            If Not fso.FolderExists(rootFolder & "\Clients\" & clientName) Then
+                fso.CreateFolder (rootFolder & "\Clients\" & clientName)
+            End If
+            
+            If Not fso.FolderExists(rootFolder & "\Clients\" & clientName & "\" & docType) Then
+                'fso.CreateFolder (rootFolder & "\Clients\" & clientName & "\" & docType)
+            End If
+            
+            'Place Capital Gains statement file in the respective folder
+            srcFolder = rootFolder & "\" & srcFolderStartPath & "\" & Range(colSubfolder & Row).Value
+            destFolder = rootFolder & "\" & destFolderStartPath & "\" & clientName & "\" & docType & "\"
+            fileName = Range(colFileName & Row).Value
+            If fileName = "" Then
+                Range(colFileMovedStatus & Row).Value = "File Name Not Found"
+            Else
+                fileName = Replace(fileName, "(", " ", , , vbTextCompare)
+                fileName = Replace(fileName, ")", "", , , vbTextCompare)
+                fileName = Replace(fileName, "  ", " ", , , vbTextCompare)
+                'fileName = Trim(fileName)
+                'fileName = fileName & ".jpg"
+                
+                
+                
+                
+                If fso.FileExists(srcFolder & "\" & fileName) Then
+                    Call fso.CopyFile(srcFolder & "\" & fileName, destFolder, True)
+                    Range(colFileMovedStatus & Row).Value = "File Moved"
+                Else
+                    Range(colFileMovedStatus & Row).Value = "File Does Not Exist"
+                End If
+            End If
+        End If
+    Next
+    
+    Call ThisWorkbook.Save
+    Set fso = Nothing
+End Sub
+
+Public Sub ArchiveFiles(srcFolderName As String, destFolderName As String, colClientName As String, colFileArchivedStatus As String)
+    Dim rootFolder As String
+    Dim fso As Scripting.FileSystemObject
+    Dim clientName As String
+    Dim lastRow As Integer
+    Dim srcFolderURI As String
+    Dim destFileURI As String
+    
+    rootFolder = ThisWorkbook.Path
+    Set fso = New Scripting.FileSystemObject
+    Range("A1").Select
+    lastRow = Selection.End(xlDown).Row
+    
+    Range(colFileArchivedStatus & "2:" & colFileArchivedStatus & lastRow).Clear
+    
+    If Not fso.FolderExists(rootFolder & "\" & srcFolderName) Then
+        Call MsgBox("Source Folder :" & vbCrLf & """" & rootFolder & "\" & srcFolderName & """" & vbCrLf & "does not exist." & vbCrLf & vbCrLf & "The process can not be executed.", vbCritical, "Source Folder Does Not Exist!")
+        End
+    End If
+    
+    If Not fso.FolderExists(rootFolder & "\" & destFolderName) Then
+        fso.CreateFolder (rootFolder & "\" & destFolderName)
+    End If
+    
+    For Row = 2 To lastRow
+        clientName = Range(colClientName & Row).Value
+        
+        srcFolderURI = rootFolder & "\" & srcFolderName & "\" & clientName
+        destFileURI = rootFolder & "\" & destFolderName & "\" & clientName & ".zip"
+        
+        If fso.FileExists(destFileURI) Then
+            Call fso.DeleteFile(destFileURI, True)
+            Range(colFileArchivedStatus & Row).Value = "Old Archive File has been deleted"
+        End If
+        
+        If fso.FolderExists(srcFolderURI) Then
+            Call Shell("powershell Compress-Archive -Path '" & srcFolderURI & "\*' -DestinationPath '" & destFileURI & "' -Force", vbHide)
+            For i = 1 To 40
+                If Not fso.FileExists(destFileURI) Then
+                    Sleep (50)
+                End If
+            Next i
+            'Application.Wait (Now + TimeValue("0:00:01"))
+            If fso.FileExists(destFileURI) Then
+                If Range(colFileArchivedStatus & Row).Value = "" Then
+                    Range(colFileArchivedStatus & Row).Value = "File Archived"
+                Else
+                    Range(colFileArchivedStatus & Row).Value = Range(colFileArchivedStatus & Row).Value & "; " & "File Archived"
+                End If
+            Else
+                If Range(colFileArchivedStatus & Row).Value = "" Then
+                    Range(colFileArchivedStatus & Row).Value = "File Not Archived"
+                Else
+                    Range(colFileArchivedStatus & Row).Value = Range(colFileArchivedStatus & Row).Value & "; " & "File Not Archived"
+                End If
+            End If
+        Else
+            Range(colFileArchivedStatus & Row).Value = "Source folder " & rootFolder & "\" & srcFolderName & "\" & clientName & " does not exist."
+        End If
+        
+    Next
+    
+    Call ThisWorkbook.Save
+    Set fso = Nothing
+End Sub
