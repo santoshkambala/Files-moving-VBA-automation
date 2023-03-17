@@ -1,0 +1,18 @@
+Private Sub cmdMoveFiles_Click()
+    Const docType As String = "" 'This will be the name of the folder in clients' folders
+    Const srcFolderStartPath As String = "New scans"
+    Const destFolderStartPath As String = "Clients"
+    Const colFirstHolder As String = "A"
+    Const colClientName As String = "B"
+    Const colSubfolder As String = "C"
+    Const colFileObtained As String = "F"
+    Const colFileName As String = "G"
+    Const colFileRenamed As String = "H"
+    Const colFileVerified As String = "J"
+    Const colFileMovedStatus As String = "K"
+
+    Call MoveFiles(docType, srcFolderStartPath, destFolderStartPath, colFirstHolder, colClientName, _
+        colSubfolder, colFileObtained, colFileName, colFileRenamed, colFileVerified, colFileMovedStatus)
+    
+    MsgBox "Done"
+End Sub
